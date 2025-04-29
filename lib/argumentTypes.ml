@@ -82,7 +82,15 @@ let rec get_computational = function
   | L _ -> []
 
 
+let rec get_ghost = function
+  | Computational (_, _, ft) -> get_ghost ft
+  | Ghost (sbt, _, ft) -> sbt :: get_ghost ft
+  | L _ -> []
+
+
 let count_computational at = List.length (get_computational at)
+
+let count_ghost at = List.length (get_ghost at)
 
 module LRT = LogicalReturnTypes
 module RT = ReturnTypes
