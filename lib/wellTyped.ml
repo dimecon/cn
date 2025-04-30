@@ -28,6 +28,7 @@ type message =
         has : int;
         expect : int
       }
+  | Unexpected_computational_args_in_lemma
   | Missing_member of Id.t
   | NIA of
       { it : IT.t;
@@ -2417,11 +2418,7 @@ module WLemma = struct
         lemma_typ
     in
     if AT.count_computational lt != 0 then
-      fail
-        { loc;
-          msg =
-            Generic !^"lemmas cannot have computational arguments" [@alert "-deprecated"]
-        }
+      fail { loc; msg = Unexpected_computational_args_in_lemma }
     else
       return lt
 end

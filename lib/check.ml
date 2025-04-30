@@ -1043,7 +1043,7 @@ module Spine : sig
     :  Loc.t ->
     fsym:Sym.t ->
     BT.t Mu.pexpr list ->
-    (Loc.t * IT.t) list ->
+    IT.t list ->
     AT.ft ->
     (RT.t -> unit m) ->
     unit m
@@ -1051,7 +1051,7 @@ module Spine : sig
   val calltype_lt
     :  Loc.t ->
     BT.t Mu.pexpr list ->
-    (Loc.t * IT.t) list ->
+    IT.t list ->
     AT.lt * Where.label ->
     (False.t -> unit m) ->
     unit m
@@ -1059,7 +1059,7 @@ module Spine : sig
   val calltype_lemma
     :  Loc.t ->
     lemma:Sym.t ->
-    (Loc.t * IT.t) list ->
+    IT.t list ->
     AT.lemmat ->
     (LRT.t -> unit m) ->
     unit m
@@ -1096,12 +1096,21 @@ end = struct
     check_pexpr pe k
 
 
-  let check_arg_it (loc, it_arg) ~(expect : BT.t) k =
+  let check_arg_it loc it_arg ~(expect : BT.t) k =
     let@ it_arg = WellTyped.check_term loc expect it_arg in
     k it_arg
 
 
-  let spine rt_subst rt_pp loc (situation : call_situation) args gargs ftyp k =
+  let spine
+        rt_subst
+        rt_pp
+        loc
+        (situation : call_situation)
+        args
+        (gargs : IT.t list)
+        ftyp
+        k
+    =
     let open ArgumentTypes in
     let original_ftyp = ftyp in
     let original_args = args in
@@ -1124,14 +1133,12 @@ end = struct
               gargs
               (subst rt_subst (make_subst [ (s, arg) ]) ftyp)
               k)
-        (* | _ :: args, _, Ghost (_, _, ftyp)  -> *)
-        (*   aux args_acc gargs_acc args gargs ftyp k *)
         | _ :: _, _, _ | [], _, Computational _ ->
           let expect = count_computational original_ftyp in
           let has = List.length original_args in
           WellTyped.ensure_same_argument_number loc `Other has ~expect
-        | [], garg :: gargs, Ghost ((s, bt), _info, ftyp) ->
-          check_arg_it garg ~expect:bt (fun garg ->
+        | [], garg :: gargs, Ghost ((s, bt), info, ftyp) ->
+          check_arg_it (fst info) garg ~expect:bt (fun garg ->
             aux
               args_acc
               (gargs_acc @ [ garg ])
@@ -1139,8 +1146,6 @@ end = struct
               gargs
               (subst rt_subst (make_subst [ (s, garg) ]) ftyp)
               k)
-        (* | [], _ :: gargs, Computational (_, _, ftyp)  -> *)
-        (*   aux args_acc gargs_acc args gargs ftyp k *)
         | [], _ :: _, L _ | [], [], Ghost _ ->
           let expect = count_ghost original_ftyp in
           let has = List.length original_gargs in
@@ -1835,7 +1840,6 @@ let rec check_expr labels (e : BT.t Mu.expr) (k : IT.t -> unit m) : unit m =
                })
          in
          (* checks pes against their annotations, and that they match ft's argument types *)
-         let its = List.map (fun it -> (loc, it)) its in
          Spine.calltype_ft
            loc
            ~fsym
@@ -2087,7 +2091,6 @@ let rec check_expr labels (e : BT.t Mu.expr) (k : IT.t -> unit m) : unit m =
               add_c loc (LC.T (eq_ (apply_ f args def.return_bt loc, body) loc)))
          | Apply (lemma, args) ->
            let@ _loc, lemma_typ = Global.get_lemma loc lemma in
-           let args = List.map (fun arg -> (loc, arg)) args in
            Spine.calltype_lemma loc ~lemma args lemma_typ (fun lrt ->
              let@ _, members =
                make_return_record
