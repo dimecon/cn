@@ -1105,6 +1105,7 @@ end = struct
     let open ArgumentTypes in
     let original_ftyp = ftyp in
     let original_args = args in
+    let original_gargs = gargs in
     let@ () =
       print_with_ctxt (fun ctxt ->
         debug 6 (lazy (call_situation situation));
@@ -1123,11 +1124,9 @@ end = struct
               gargs
               (subst rt_subst (make_subst [ (s, arg) ]) ftyp)
               k)
-        | _ :: _, _, _ ->
-          let expect = count_computational original_ftyp in
-          let has = List.length original_args in
-          WellTyped.ensure_same_argument_number loc `Other has ~expect
-        | [], _, Computational _ ->
+        (* | _ :: args, _, Ghost (_, _, ftyp)  -> *)
+        (*   aux args_acc gargs_acc args gargs ftyp k *)
+        | _ :: _, _, _ | [], _, Computational _ ->
           let expect = count_computational original_ftyp in
           let has = List.length original_args in
           WellTyped.ensure_same_argument_number loc `Other has ~expect
@@ -1140,13 +1139,11 @@ end = struct
               gargs
               (subst rt_subst (make_subst [ (s, garg) ]) ftyp)
               k)
-        | [], _ :: _, _ ->
+        (* | [], _ :: gargs, Computational (_, _, ftyp)  -> *)
+        (*   aux args_acc gargs_acc args gargs ftyp k *)
+        | [], _ :: _, L _ | [], [], Ghost _ ->
           let expect = count_ghost original_ftyp in
-          let has = List.length original_args in
-          WellTyped.ensure_same_argument_number loc `Other has ~expect
-        | [], [], Ghost _ ->
-          let expect = count_ghost original_ftyp in
-          let has = List.length original_args in
+          let has = List.length original_gargs in
           WellTyped.ensure_same_argument_number loc `Other has ~expect
         | [], [], L ftyp ->
           let@ () =

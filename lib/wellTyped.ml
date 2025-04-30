@@ -1913,17 +1913,18 @@ module BaseTyping = struct
       let@ its =
         let wrong_number_arguments () =
           let has = List.length its in
-          let expect = AT.count_computational lemma_typ in
+          let expect = AT.count_ghost lemma_typ in
           fail { loc; msg = Number_arguments { type_ = `Other; has; expect } }
         in
         let rec check_args lemma_typ its =
           match (lemma_typ, its) with
-          | AT.Computational ((_s, bt), _info, lemma_typ'), it :: its' ->
+          | AT.Ghost ((_s, bt), _info, lemma_typ'), it :: its' ->
             let@ it = WIT.check loc bt it in
             let@ its' = check_args lemma_typ' its' in
             return (it :: its')
+          | AT.Computational _, _ -> failwith "unexpected computational argument in lemma"
           | AT.L _, [] -> return []
-          | _ -> wrong_number_arguments ()
+          | AT.Ghost _, [] | AT.L _, _ :: _ -> wrong_number_arguments ()
         in
         check_args lemma_typ its
       in
@@ -2404,13 +2405,25 @@ module WLFD = struct
 end
 
 module WLemma = struct
+  module AT = ArgumentTypes
+
   let welltyped loc _lemma_s lemma_typ =
-    WAT.welltyped
-      (fun lrt -> pure (WLRT.welltyped lrt))
-      LogicalReturnTypes.pp
-      "lemma"
-      loc
-      lemma_typ
+    let@ lt =
+      WAT.welltyped
+        (fun lrt -> pure (WLRT.welltyped lrt))
+        LogicalReturnTypes.pp
+        "lemma"
+        loc
+        lemma_typ
+    in
+    if AT.count_computational lt != 0 then
+      fail
+        { loc;
+          msg =
+            Generic !^"lemmas cannot have computational arguments" [@alert "-deprecated"]
+        }
+    else
+      return lt
 end
 
 module WDT = struct
