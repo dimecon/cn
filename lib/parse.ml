@@ -74,6 +74,10 @@ let cn_statements annots =
   annots |> A.get_cerb_magic_attr |> ListM.concat_mapM (parse C_parser.cn_statements)
 
 
+let cn_ghosts annots =
+  annots |> A.get_cerb_magic_attr |> ListM.concat_mapM (parse C_parser.cn_ghosts)
+
+
 let function_spec (A.Attrs attributes) =
   [ A.Aattrs (Attrs (List.rev attributes)) ]
   |> A.get_cerb_magic_attr
