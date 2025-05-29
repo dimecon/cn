@@ -75,7 +75,7 @@ let cn_statements annots =
 
 
 let cn_ghosts annots =
-  annots |> A.get_cerb_magic_attr |> ListM.concat_mapM (parse C_parser.cn_ghosts)
+  annots |> A.get_cerb_magic_attr |> ListM.concat_mapM (parse C_parser.cn_ghost_args)
 
 
 let function_spec (A.Attrs attributes) =
