@@ -204,6 +204,7 @@ type 'i arguments_l =
   | Resource of (Sym.t * (Request.t * BaseTypes.t)) * Locations.info * 'i arguments_l
   | Constraint of LogicalConstraints.t * Locations.info * 'i arguments_l
   | I of 'i
+[@@deriving map]
 
 let mDefine (bound, info) t = Define (bound, info, t)
 
@@ -219,6 +220,20 @@ type 'i arguments =
   | Computational of (Sym.t * BaseTypes.t) * Locations.info * 'i arguments
   | Ghost of (Sym.t * BaseTypes.t) * Locations.info * 'i arguments
   | L of 'i arguments_l
+[@@deriving map]
+
+let rec param_of_arguments = function
+  | Computational (_, _, args) -> param_of_arguments args
+  | Ghost (_, _, args) -> param_of_arguments args
+  | L args ->
+    let rec aux = function
+      | Define (_, _, args) -> aux args
+      | Resource (_, _, args) -> aux args
+      | Constraint (_, _, args) -> aux args
+      | I expr -> expr
+    in
+    aux args
+
 
 let mComputational (bound, info) t = Computational (bound, info, t)
 
@@ -250,11 +265,16 @@ let dtree_of_arguments dtree_i =
   aux
 
 
+type 'a label_payload =
+  | Skipped
+  | MyExpr of 'a expr
+
 type parse_ast_label_spec =
   { label_spec : (Sym.t, Cerb_frontend.Ctype.ctype) Cerb_frontend.Cn.cn_condition list }
 
 type 'TY label_def =
-  | Non_inlined of Locations.t * Sym.t * Cerb_frontend.Annot.label_annot * unit arguments
+  | Non_inlined of
+      Locations.t * Sym.t * Cerb_frontend.Annot.label_annot * 'TY label_payload arguments
   | Return of Locations.t
   | Loop of
       Locations.t

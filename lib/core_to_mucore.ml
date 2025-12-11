@@ -949,7 +949,7 @@ let normalise_label
          if !Sym.executable_spec_enabled then
            let@ label_args =
              make_label_args
-               (fun _ _ -> return ())
+               (fun _ _ -> return Mu.Skipped)
                loc
                env
                st

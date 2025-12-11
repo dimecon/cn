@@ -2505,7 +2505,22 @@ module WProc = struct
              (fun _sym def ->
                 match def with
                 | Non_inlined (loc, name, annot, args) ->
-                  return (Non_inlined (loc, name, annot, args))
+                  let param = Mu.param_of_arguments args in
+                  (match param with
+                   | Skipped -> return (Non_inlined (loc, name, annot, args))
+                   | MyExpr expr ->
+                     let@ args =
+                       pure
+                         (WArgs.welltyped
+                            (fun label_body ->
+                               BaseTyping.check_expr label_context Unit label_body)
+                            "label"
+                            loc
+                            (map_arguments (fun _ -> expr) args))
+                     in
+                     return
+                       (Non_inlined
+                          (loc, name, annot, map_arguments (fun expr -> MyExpr expr) args)))
                 | Return loc -> return (Return loc)
                 | Loop (loc, label_args_and_body, annots, parsed_spec, loop_info) ->
                   let@ label_args_and_body =
